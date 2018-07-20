@@ -3,6 +3,10 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+<<<<<<< c2331992b3e96c3d94020c65104bb2110690631f
+=======
+use App\Http\Requests\TicketFormRequest;
+>>>>>>> commit in develop
 
 class TicketFormRequest extends FormRequest
 {
