@@ -1,84 +1,71 @@
 <?php
-
-namespace App\Http\Controllers;
-
-use Illuminate\Http\Request;
-
-class TicketsController extends Controller
-{
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function index()
+    namespace App\Http\Controllers;
+    use Illuminate\Http\Request;
+    use App\Http\Requests\TicketFormRequest;
+    use App\Ticket;
+    use App\Comment;
+    use Illuminate\Support\Facades\Mail;
+    class TicketsController extends Controller
     {
-        //
-    }
+        public function index()
+        {
+             $tickets = Ticket::all();
+            return view('tickets.index', compact('tickets'));
+        }
+        public function create()
+        {
+            return view('tickets.create');
+        }
+        public function store(TicketFormRequest $request)
+        {
+            $slug = uniqid();
+            $ticket = new Ticket(array(
+                'title' => $request->get('title'),
+                'content' => $request->get('content'),
+                'slug' => $slug
+            ));
+            $ticket->save();
+            $data = array(
+                'ticket' => $slug,
+            );
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        return view('tickets.create');
-    }
+            Mail::send('emails.ticket', $data, function ($message) {
+                $message->from('yourEmail@domain.com', 'Learning Laravel');
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function store(Request $request)
-    {
-        //
+                $message->to('yourEmail@domain.com')->subject('There is a new ticket!');
+            });
+            return redirect('/contact')->with('status', 'Your ticket has been created! Its unique id is: '.$slug);
+        }
+        public function show($id)
+        {
+            $ticket = Ticket::whereSlug($id)->firstOrFail();
+            $comments = $ticket->comments()->get();
+            return view('tickets.show', compact('ticket', 'comments'));
+        }
+        public function edit($id)
+        {
+            $ticket = Ticket::whereSlug($id)->firstOrFail();
+            return view('tickets.edit', compact('ticket'));
+            
+        }
+        public function update($slug, TicketFormRequest $request)
+        {
+            $ticket = Ticket::whereSlug($slug)->firstOrFail();
+            $ticket->title = $request->get('title');
+            $ticket->content = $request->get('content');
+            if($request->get('status') != null) {
+                $ticket->status = 0;
+            } else {
+                $ticket->status = 1;
+            }
+            $ticket->save();
+            return redirect(action('TicketsController@edit', $ticket->slug))->with('status', 'The ticket '.$slug.' has been updated!');
+        }
+        public function destroy($id)
+        {
+            $ticket = Ticket::whereSlug($id)->firstOrFail();
+            $ticket->delete();
+            return redirect('/tickets')->with('status', 'The ticket '.$id.' has been deleted!');
+        }
     }
-
-    /**
-     * Display the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function show($id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit($id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy($id)
-    {
-        //
-    }
-}
+?>
